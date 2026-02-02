@@ -93,12 +93,32 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Apply database schema and seed data automatically
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.EnsureCreated();
+
+    // Create admin user if not exists
+    if (!dbContext.Users.Any(u => u.Email == "admin@sistema.com"))
+    {
+        var adminUser = new InventarioSystem.Core.Entities.User
+        {
+            Username = "admin",
+            Email = "admin@sistema.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+            Role = "Administrador",
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+        dbContext.Users.Add(adminUser);
+        dbContext.SaveChanges();
+    }
 }
+
+// Configure the HTTP request pipeline.
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 

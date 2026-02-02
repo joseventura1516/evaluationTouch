@@ -30,7 +30,7 @@ namespace InventarioSystem.API.Controllers
                 if (!result.Success)
                     return BadRequest(new { message = result.Message });
 
-                return Ok(new { message = "Usuario registrado exitosamente", data = result.Data });
+                return Ok(new { success = true, message = "Usuario registrado exitosamente", data = result.Data });
             }
             catch (Exception ex)
             {
@@ -52,7 +52,7 @@ namespace InventarioSystem.API.Controllers
                 if (!result.Success)
                     return Unauthorized(new { message = result.Message });
 
-                return Ok(new { message = "Login exitoso", data = result.Data });
+                return Ok(new { success = true, message = "Login exitoso", data = result.Data });
             }
             catch (Exception ex)
             {

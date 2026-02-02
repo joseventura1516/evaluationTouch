@@ -25,14 +25,31 @@ namespace InventarioSystem.API.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var notifications = await _notificationService.GetUserNotificationsAsync(userId);
+                var result = await _notificationService.GetNotificationsByUserIdAsync(userId);
 
-                return Ok(new { data = notifications });
+                return Ok(new { success = result.Success, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error obteniendo notificaciones");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            }
+        }
+
+        [HttpGet("unread")]
+        public async Task<IActionResult> GetUnreadNotifications()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _notificationService.GetUnreadNotificationsByUserIdAsync(userId);
+
+                return Ok(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo notificaciones no leídas");
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -42,14 +59,14 @@ namespace InventarioSystem.API.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var count = await _notificationService.GetUnreadCountAsync(userId);
+                var result = await _notificationService.GetUnreadCountAsync(userId);
 
-                return Ok(new { count });
+                return Ok(new { success = result.Success, count = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error obteniendo conteo de notificaciones");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -58,17 +75,35 @@ namespace InventarioSystem.API.Controllers
         {
             try
             {
-                var result = await _notificationService.MarkAsReadAsync(id);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _notificationService.MarkAsReadAsync(id, userId);
 
-                if (!result)
-                    return NotFound(new { message = "Notificación no encontrada" });
+                if (!result.Success)
+                    return NotFound(new { success = false, message = result.Message });
 
-                return Ok(new { message = "Notificación marcada como leída" });
+                return Ok(new { success = true, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marcando notificación como leída");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            }
+        }
+
+        [HttpPut("mark-all-read")]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _notificationService.MarkAllAsReadAsync(userId);
+
+                return Ok(new { success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marcando todas las notificaciones como leídas");
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
     }

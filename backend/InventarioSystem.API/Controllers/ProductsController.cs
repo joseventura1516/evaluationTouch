@@ -25,13 +25,13 @@ namespace InventarioSystem.API.Controllers
         {
             try
             {
-                var products = await _productService.GetAllProductsAsync(searchTerm, category);
-                return Ok(new { data = products });
+                var result = await _productService.SearchProductsAsync(searchTerm, category);
+                return Ok(new { success = result.Success, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error obteniendo productos");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -40,17 +40,17 @@ namespace InventarioSystem.API.Controllers
         {
             try
             {
-                var product = await _productService.GetProductByIdAsync(id);
+                var result = await _productService.GetProductByIdAsync(id);
 
-                if (product == null)
-                    return NotFound(new { message = "Producto no encontrado" });
+                if (!result.Success)
+                    return NotFound(new { success = false, message = result.Message });
 
-                return Ok(new { data = product });
+                return Ok(new { success = true, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error obteniendo producto");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -59,13 +59,28 @@ namespace InventarioSystem.API.Controllers
         {
             try
             {
-                var products = await _productService.GetLowStockProductsAsync();
-                return Ok(new { data = products });
+                var result = await _productService.GetLowStockProductsAsync();
+                return Ok(new { success = result.Success, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error obteniendo productos con bajo stock");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            }
+        }
+
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetCategories()
+        {
+            try
+            {
+                var result = await _productService.GetCategoriesAsync();
+                return Ok(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo categorías");
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -82,15 +97,15 @@ namespace InventarioSystem.API.Controllers
                 var result = await _productService.CreateProductAsync(productDto, userId);
 
                 if (!result.Success)
-                    return BadRequest(new { message = result.Message });
+                    return BadRequest(new { success = false, message = result.Message });
 
-                return CreatedAtAction(nameof(GetProductById), new { id = result.Data.Id },
-                    new { message = "Producto creado exitosamente", data = result.Data });
+                return CreatedAtAction(nameof(GetProductById), new { id = result.Data!.Id },
+                    new { success = true, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creando producto");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -103,18 +118,17 @@ namespace InventarioSystem.API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var result = await _productService.UpdateProductAsync(id, productDto, userId);
+                var result = await _productService.UpdateProductAsync(id, productDto);
 
                 if (!result.Success)
-                    return BadRequest(new { message = result.Message });
+                    return BadRequest(new { success = false, message = result.Message });
 
-                return Ok(new { message = "Producto actualizado exitosamente", data = result.Data });
+                return Ok(new { success = true, message = result.Message, data = result.Data });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error actualizando producto");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
 
@@ -127,14 +141,34 @@ namespace InventarioSystem.API.Controllers
                 var result = await _productService.DeleteProductAsync(id);
 
                 if (!result.Success)
-                    return BadRequest(new { message = result.Message });
+                    return BadRequest(new { success = false, message = result.Message });
 
-                return Ok(new { message = "Producto eliminado exitosamente" });
+                return Ok(new { success = true, message = result.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error eliminando producto");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            }
+        }
+
+        [HttpPost("{id}/report-low-stock")]
+        public async Task<IActionResult> ReportLowStock(int id)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _productService.ReportLowStockAsync(id, userId);
+
+                if (!result.Success)
+                    return BadRequest(new { success = false, message = result.Message });
+
+                return Ok(new { success = true, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reportando stock bajo");
+                return StatusCode(500, new { success = false, message = "Error interno del servidor" });
             }
         }
     }
