@@ -1,11 +1,14 @@
 using InventarioSystem.Core.Interfaces;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using Microsoft.VisualBasic;
 
 namespace InventarioSystem.Core.Services
 {
+    
     public class ReportService : IReportService
     {
+        
         private readonly IProductRepository _productRepository;
 
         public ReportService(IProductRepository productRepository)
@@ -15,12 +18,13 @@ namespace InventarioSystem.Core.Services
 
         public async Task<byte[]> GenerateLowStockReportPdfAsync()
         {
+            
             var lowStockProducts = await _productRepository.GetLowStockProductsAsync(5);
 
             using var memoryStream = new MemoryStream();
             var document = new Document(PageSize.A4, 25, 25, 30, 30);
             var writer = PdfWriter.GetInstance(document, memoryStream);
-
+            writer.PageEvent = new PageNummberEvent();
             document.Open();
 
             // Título
@@ -42,12 +46,12 @@ namespace InventarioSystem.Core.Services
             document.Add(date);
 
             // Tabla
-            var table = new PdfPTable(5)
+            var table = new PdfPTable(6)
             {
                 WidthPercentage = 100,
                 SpacingBefore = 10
             };
-            table.SetWidths(new float[] { 3f, 4f, 2f, 2f, 2f });
+            table.SetWidths(new float[] { 3f, 4f, 2f, 2f, 2f,2f });
 
             // Encabezados
             var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 11, BaseColor.White);
@@ -58,7 +62,8 @@ namespace InventarioSystem.Core.Services
             AddHeaderCell(table, "Precio", headerFont, headerColor);
             AddHeaderCell(table, "Cantidad", headerFont, headerColor);
             AddHeaderCell(table, "Estado", headerFont, headerColor);
-
+            AddHeaderCell(table, "Fecha", headerFont, headerColor);
+            
             // Datos
             var cellFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, BaseColor.Black);
             var warningColor = new BaseColor(231, 76, 60);
@@ -84,6 +89,7 @@ namespace InventarioSystem.Core.Services
                 table.AddCell(quantityCell);
 
                 AddCell(table, "Bajo", cellFont, bgColor);
+                AddCell(table, product.CreatedAt.ToString("dd/MM/yyyy"), cellFont, bgColor);
                 rowIndex++;
             }
 
@@ -96,7 +102,7 @@ namespace InventarioSystem.Core.Services
                 SpacingBefore = 20
             };
             document.Add(summary);
-
+            
             document.Close();
             writer.Close();
 
@@ -110,7 +116,7 @@ namespace InventarioSystem.Core.Services
             using var memoryStream = new MemoryStream();
             var document = new Document(PageSize.A4, 25, 25, 30, 30);
             var writer = PdfWriter.GetInstance(document, memoryStream);
-
+            writer.PageEvent = new PageNummberEvent();
             document.Open();
 
             // Título
@@ -132,12 +138,12 @@ namespace InventarioSystem.Core.Services
             document.Add(date);
 
             // Tabla
-            var table = new PdfPTable(6)
+            var table = new PdfPTable(7)
             {
                 WidthPercentage = 100,
                 SpacingBefore = 10
             };
-            table.SetWidths(new float[] { 3f, 3f, 2f, 2f, 2f, 2f });
+            table.SetWidths(new float[] { 3f, 3f, 2f, 2f, 2f, 2f,2f });
 
             // Encabezados
             var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 11, BaseColor.White);
@@ -149,6 +155,7 @@ namespace InventarioSystem.Core.Services
             AddHeaderCell(table, "Precio", headerFont, headerColor);
             AddHeaderCell(table, "Cantidad", headerFont, headerColor);
             AddHeaderCell(table, "Estado", headerFont, headerColor);
+            AddHeaderCell(table, "Fecha", headerFont, headerColor);
 
             // Datos
             var cellFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, BaseColor.Black);
@@ -184,7 +191,7 @@ namespace InventarioSystem.Core.Services
                     Padding = 8
                 };
                 table.AddCell(statusCell);
-
+                AddCell(table, product.CreatedAt.ToString("dd/MM/yyyy"), cellFont, bgColor);
                 rowIndex++;
             }
 
@@ -200,7 +207,7 @@ namespace InventarioSystem.Core.Services
             document.Add(new Paragraph($"Total de productos: {totalProducts}", cellFont));
             document.Add(new Paragraph($"Productos con inventario bajo: {lowStockCount}", cellFont));
             document.Add(new Paragraph($"Valor total del inventario: ${totalValue:N2}", cellFont));
-
+            
             document.Close();
             writer.Close();
 
@@ -236,6 +243,34 @@ namespace InventarioSystem.Core.Services
             if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
                 return text;
             return text.Substring(0, maxLength - 3) + "...";
+        }
+    }
+
+    public class PageNummberEvent : PdfPageEventHelper
+    {
+        private PdfContentByte cb;
+        private BaseFont bf;
+        private int pageNummber;
+
+        public override void OnOpenDocument(PdfWriter writer, Document document)
+        {
+            bf=BaseFont.CreateFont(BaseFont.HELVETICA,BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            cb = writer.DirectContent
+;           //base.OnOpenDocument(writer, document);
+        }
+
+        public override void OnEndPage(PdfWriter writer, Document document)
+        {
+            pageNummber= writer.PageNumber;
+            string text = $"Pagina {pageNummber}";
+            float x = document.PageSize.Width - 100;
+            float y = document.PageSize.GetBottom(30);
+
+            cb.BeginText();
+            cb.SetFontAndSize(bf,10);
+            cb.ShowTextAligned(Element.ALIGN_RIGHT,text,x,y,0);
+            cb.EndText();
+            //base.OnEndPage(writer, document);
         }
     }
 }
